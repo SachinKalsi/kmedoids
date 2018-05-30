@@ -1,7 +1,5 @@
 from scipy.sparse import csr_matrix
 import numpy as np
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
 import random
 import matplotlib.pyplot as plt
 
