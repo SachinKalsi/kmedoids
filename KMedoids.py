@@ -1,7 +1,6 @@
 from scipy.sparse import csr_matrix
 import numpy as np
 import random
-import matplotlib.pyplot as plt
 
 class KMedoids:
     def __init__(self, n_cluster=2, max_iter=50, tol=0.0001):
