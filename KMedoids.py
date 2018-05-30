@@ -40,7 +40,6 @@ class KMedoids:
         for row in range(self.__rows):
             if self.tol_reached <= self.tol:
                 break
-#             if row not in self.medoids:
             self.__swap_and_calculate_new_distance(row)
                 
      
@@ -62,7 +61,6 @@ class KMedoids:
         clusters = {}
         distance = 0
         for row in range(self.__rows):
-#             if row not in medoids:
             nearest_medoid, nearest_distance = self.__get_shortest_distance_to_mediod(row)
             distance += nearest_distance
             if nearest_medoid not in clusters.keys():
@@ -80,7 +78,6 @@ class KMedoids:
         distances = []
         indices = []
         for row in range(self.__rows):
-#             if row not in self.medoids:
             indices.append(row)
             distances.append(self.__get_shortest_distance_to_mediod(row)[1])
         distances_index = np.argsort(distances)
