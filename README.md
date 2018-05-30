@@ -21,4 +21,4 @@ k_medoids = KMedoids(n_cluster=2)
 k_medoids.fit(data)
 ```
 #### Visualization
-
+[Clusters](./visualisation.png)
