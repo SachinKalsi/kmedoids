@@ -21,4 +21,4 @@ k_medoids = KMedoids(n_cluster=2)
 k_medoids.fit(data)
 ```
 #### Visualization
-[Clusters Visualization - Ipython notebook](./demo.ipynb)
+(https://github.com/SachinKalsi/kmedoids/blob/master/visualization.png)
