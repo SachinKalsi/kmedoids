@@ -20,4 +20,4 @@ data = [[2, 6], [3, 4], [3, 8], [4, 7], [6, 2], [6, 4], [7, 3], [7, 4], [8, 5], 
 k_medoids = KMedoids(n_cluster=2)
 k_medoids.fit(data)
 ```
-![Visualization](visualization.png)
+![Visualization](visualization_.png)
