@@ -1,6 +1,9 @@
 from scipy.sparse import csr_matrix
 import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
 import random
+import matplotlib.pyplot as plt
 
 class KMedoids:
     def __init__(self, n_cluster=2, max_iter=50, tol=0.0001):
@@ -17,17 +20,16 @@ class KMedoids:
         self.medoids = []
         self.clusters = {}
         self.tol_reached = float('inf')
-        self.current_distance = 0
+        self.__current_distance = 0
         
     def fit(self, data):
         self.__data = data
         self.__set_data_type()
         self.__start_algo()
-        return self
     
     def __start_algo(self):
         self.__initialize_medoids()
-        self.clusters, self.current_distance = self.__calculate_clusters(self.medoids)
+        self.clusters, self.__current_distance = self.__calculate_clusters(self.medoids)
         self.__update_clusters()
         
     def __update_clusters(self):
@@ -40,6 +42,7 @@ class KMedoids:
         for row in range(self.__rows):
             if self.tol_reached <= self.tol:
                 break
+#             if row not in self.medoids:
             self.__swap_and_calculate_new_distance(row)
                 
      
@@ -49,9 +52,9 @@ class KMedoids:
             temp_medoids_list = list(self.medoids)
             temp_medoids_list[index] = self.medoids[medoid]
             clusters, distance_ = self.__calculate_clusters(temp_medoids_list)
-            self.tol_reached = abs(distance_ - self.current_distance)
-            if distance_ < self.current_distance:
-                self.current_distance = distance_
+            self.tol_reached = abs(distance_ - self.__current_distance)
+            if distance_ < self.__current_distance:
+                self.__current_distance = distance_
                 self.clusters = clusters
                 self.medoids = temp_medoids_list[:]
                 break
@@ -61,6 +64,7 @@ class KMedoids:
         clusters = {}
         distance = 0
         for row in range(self.__rows):
+#             if row not in medoids:
             nearest_medoid, nearest_distance = self.__get_shortest_distance_to_mediod(row)
             distance += nearest_distance
             if nearest_medoid not in clusters.keys():
@@ -78,6 +82,7 @@ class KMedoids:
         distances = []
         indices = []
         for row in range(self.__rows):
+#             if row not in self.medoids:
             indices.append(row)
             distances.append(self.__get_shortest_distance_to_mediod(row)[1])
         distances_index = np.argsort(distances)
