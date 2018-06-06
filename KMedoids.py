@@ -1,78 +1,114 @@
 from scipy.sparse import csr_matrix
 import numpy as np
-import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
 import random
-import matplotlib.pyplot as plt
 
 class KMedoids:
-    def __init__(self, n_cluster=2, max_iter=50, tol=0.0001):
+    def __init__(self, n_cluster=2, max_iter=10, tol=0.1):
         '''Kmedoids constructor called'''
         self.n_cluster = n_cluster
-        self.tol = tol
         self.max_iter = max_iter
-        self.__distance_matrix = None
+        self.tol = tol
+        
+        self.medoids = []
+        self.clusters = {}
+        self.tol_reached = float('inf')
+        self.current_distance = 0
+        
         self.__data = None
         self.__is_csr = None
         self.__rows = 0
         self.__columns = 0
-        self.__distance_matrix = None
-        self.medoids = []
-        self.clusters = {}
-        self.tol_reached = float('inf')
-        self.__current_distance = 0
+        self.cluster_distances = {}
+        
         
     def fit(self, data):
         self.__data = data
-        self.__set_data_type()
+        self.__set_data_type()     
         self.__start_algo()
+        return self
     
     def __start_algo(self):
         self.__initialize_medoids()
-        self.clusters, self.__current_distance = self.__calculate_clusters(self.medoids)
+        self.clusters, self.cluster_distances = self.__calculate_clusters(self.medoids)
         self.__update_clusters()
-        
+ 
     def __update_clusters(self):
         for i in range(self.max_iter):
-            if self.tol_reached <= self.tol:
+            cluster_dist_with_new_medoids = self.__swap_and_recalculate_clusters()
+            if self.__is_new_cluster_dist_small(cluster_dist_with_new_medoids) == True:
+                self.clusters, self.cluster_distances = self.__calculate_clusters(self.medoids)
+            else:
                 break
-            self.__swap_and_recalculate_clusters()
 
+    def __is_new_cluster_dist_small(self, cluster_dist_with_new_medoids):
+        existance_dist = self.calculate_distance_of_clusters()
+        new_dist = self.calculate_distance_of_clusters(cluster_dist_with_new_medoids)
+        
+        if existance_dist > new_dist and (existance_dist - new_dist) > self.tol:
+            self.medoids = cluster_dist_with_new_medoids.keys()
+            return True
+        return False
+    
+    def calculate_distance_of_clusters(self, cluster_dist=None):
+        if cluster_dist == None:
+            cluster_dist = self.cluster_distances
+        dist = 0
+        for medoid in cluster_dist.keys():
+            dist += cluster_dist[medoid]
+        return dist
+        
     def __swap_and_recalculate_clusters(self):
-        for row in range(self.__rows):
-            if self.tol_reached <= self.tol:
-                break
-#             if row not in self.medoids:
-            self.__swap_and_calculate_new_distance(row)
-                
-     
-    def __swap_and_calculate_new_distance(self, row):
-        index = 0
-        for medoid in range(self.n_cluster):
-            temp_medoids_list = list(self.medoids)
-            temp_medoids_list[index] = self.medoids[medoid]
-            clusters, distance_ = self.__calculate_clusters(temp_medoids_list)
-            self.tol_reached = abs(distance_ - self.__current_distance)
-            if distance_ < self.__current_distance:
-                self.__current_distance = distance_
-                self.clusters = clusters
-                self.medoids = temp_medoids_list[:]
-                break
-            index += 1
+        # http://www.math.le.ac.uk/people/ag153/homepage/KmeansKmedoids/Kmeans_Kmedoids.html
+        cluster_dist = {}
+        for medoid in self.medoids:
+            is_shortest_medoid_found = False
+            for data_index in self.clusters[medoid]:
+                if data_index != medoid:
+                    cluster_list = list(self.clusters[medoid])
+                    cluster_list[self.clusters[medoid].index(data_index)] = medoid
+                    new_distance = self.calculate_inter_cluster_distance(data_index, cluster_list)
+                    if new_distance < self.cluster_distances[medoid]:
+                        cluster_dist[data_index] = new_distance
+                        is_shortest_medoid_found = True
+                        break
+            if is_shortest_medoid_found == False:
+                cluster_dist[medoid] = self.cluster_distances[medoid]
+        return cluster_dist
+    
+    def calculate_inter_cluster_distance(self, medoid, cluster_list):
+        distance = 0
+        for data_index in cluster_list:
+            distance += self.__get_distance(medoid, data_index)
+        return distance/len(cluster_list)
         
     def __calculate_clusters(self, medoids):
         clusters = {}
-        distance = 0
+        cluster_distances = {}
+        for medoid in medoids:
+            clusters[medoid] = []
+            cluster_distances[medoid] = 0
+            
         for row in range(self.__rows):
-#             if row not in medoids:
-            nearest_medoid, nearest_distance = self.__get_shortest_distance_to_mediod(row)
-            distance += nearest_distance
-            if nearest_medoid not in clusters.keys():
-                clusters[nearest_medoid] = []
+            nearest_medoid, nearest_distance = self.__get_shortest_distance_to_mediod(row, medoids)
+            cluster_distances[nearest_medoid] += nearest_distance
             clusters[nearest_medoid].append(row)
-        return clusters, distance
+        
+        for medoid in medoids:
+            cluster_distances[medoid] /= len(clusters[medoid])
+        return clusters, cluster_distances
         
         
+    def __get_shortest_distance_to_mediod(self, row_index, medoids):
+        min_distance = float('inf')
+        current_medoid = None
+        
+        for medoid in medoids:
+            current_distance = self.__get_distance(medoid, row_index)
+            if current_distance < min_distance:
+                min_distance = current_distance
+                current_medoid = medoid
+        return current_medoid, min_distance
+
     def __initialize_medoids(self):
         self.medoids.append(random.randint(0,self.__rows-1))
         while len(self.medoids) != self.n_cluster:
@@ -82,26 +118,17 @@ class KMedoids:
         distances = []
         indices = []
         for row in range(self.__rows):
-#             if row not in self.medoids:
             indices.append(row)
-            distances.append(self.__get_shortest_distance_to_mediod(row)[1])
+            distances.append(self.__get_shortest_distance_to_mediod(row,self.medoids)[1])
         distances_index = np.argsort(distances)
-        return indices[self.__get_distant_medoid(distances_index)]
+        choosen_dist = self.__select_distant_medoid(distances_index)
+        return indices[choosen_dist]
     
-    def __get_distant_medoid(self, distances_index):
+    def __select_distant_medoid(self, distances_index):
         start_index = round(0.8*len(distances_index))
-        end_index = len(distances_index)-1
+        end_index = round(1*(len(distances_index)-1)) 
         return distances_index[random.randint(start_index, end_index)]
-        
-    def __get_shortest_distance_to_mediod(self, row_index):
-        min_distance = float('inf')
-        current_medoid = None
-        for medoid in self.medoids:
-            current_distance = self.__get_distance(medoid, row_index)
-            if current_distance < min_distance:
-                min_distance = current_distance
-                current_medoid = medoid
-        return current_medoid, min_distance
+
                            
     def __get_distance(self, x1, x2):
         a = self.__data[x1].toarray() if self.__is_csr == True else np.array(self.__data[x1])
@@ -119,4 +146,3 @@ class KMedoids:
             self.__columns = len(self.__data[0])
         else:
             raise ValueError('Invalid input')
-            
