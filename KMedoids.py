@@ -3,11 +3,15 @@ import numpy as np
 import random
 
 class KMedoids:
-    def __init__(self, n_cluster=2, max_iter=10, tol=0.1):
+    def __init__(self, n_cluster=2, max_iter=10, tol=0.1, start_prob=0.8, end_prob=0.99):
         '''Kmedoids constructor called'''
+        if start_prob < 0 or start_prob >= 1 or end_prob < 0 or end_prob >= 1 or start_prob > end_prob:
+            raise ValueError('Invalid input')
         self.n_cluster = n_cluster
         self.max_iter = max_iter
         self.tol = tol
+        self.start_prob = start_prob
+        self.end_prob = end_prob
         
         self.medoids = []
         self.clusters = {}
@@ -110,6 +114,7 @@ class KMedoids:
         return current_medoid, min_distance
 
     def __initialize_medoids(self):
+        '''Kmeans++ initialisation'''
         self.medoids.append(random.randint(0,self.__rows-1))
         while len(self.medoids) != self.n_cluster:
             self.medoids.append(self.__find_distant_medoid())
@@ -125,8 +130,8 @@ class KMedoids:
         return indices[choosen_dist]
     
     def __select_distant_medoid(self, distances_index):
-        start_index = round(0.8*len(distances_index))
-        end_index = round(1*(len(distances_index)-1)) 
+        start_index = round(self.start_prob*len(distances_index))
+        end_index = round(self.end_prob*(len(distances_index)-1)) 
         return distances_index[random.randint(start_index, end_index)]
 
                            
@@ -136,6 +141,7 @@ class KMedoids:
         return np.linalg.norm(a-b)
     
     def __set_data_type(self):
+        '''to check whether the given input is of type "list" or "csr" '''
         if isinstance(self.__data,csr_matrix):
             self.__is_csr = True
             self.__rows = self.__data.shape[0]
